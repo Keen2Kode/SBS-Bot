@@ -24,12 +24,6 @@ On **Friday at 8 PM**, if any jam session does **not have a card holder availabl
 
 ## 🛠 Deployment
 
-This bot is hosted 24/7 using [Render.com](https://render.com) as a **background worker**.
+This bot is hosted 24/7 using a shady bot hosting service. But hey, it's cheap.
 
 ---
-
-## 📁 File Structure
-
-- `bot.py`: Main script with all scheduled jobs and bot logic.
-- `render.yaml`: Render deployment configuration.
-- `requirements.txt`: Python dependencies.
