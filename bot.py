@@ -38,7 +38,7 @@ async def on_ready():
 
     
     # await jam_poll()
-    await card_holder_poll()
+    # await card_holder_poll()
     scheduler.start()
 
 
