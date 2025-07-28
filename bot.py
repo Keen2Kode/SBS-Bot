@@ -25,13 +25,20 @@ async def on_ready():
     print(f'{bot.user} is ready')
 
     scheduler = AsyncIOScheduler(timezone=ZoneInfo("Australia/Melbourne"))
-    scheduler.add_job(jam_poll, CronTrigger(day_of_week='mon', hour=12, minute=0, id="jam_poll", replace_existing=True, misfire_grace_time=60))
-    scheduler.add_job(card_holder_poll, CronTrigger(day_of_week='mon', hour=12, minute=0, id="card_holder_poll", replace_existing=True, misfire_grace_time=60))
-    scheduler.add_job(card_holder_alert_1, CronTrigger(day_of_week='thu', hour=18, minute=0, id="card_holder_alert_1", replace_existing=True, misfire_grace_time=60))
-    scheduler.add_job(card_holder_alert_2, CronTrigger(day_of_week='fri', hour=20, minute=0, id="card_holder_alert_2", replace_existing=True, misfire_grace_time=60))
+    common_job_kwargs = {
+        "replace_existing": True,
+        "misfire_grace_time": 60
+    }
+
+    scheduler.add_job(jam_poll, CronTrigger(day_of_week='mon', hour=12, minute=0), id="jam_poll", **common_job_kwargs)
+    scheduler.add_job(card_holder_poll, CronTrigger(day_of_week='mon', hour=12, minute=0), id="card_holder_poll", **common_job_kwargs)
+    scheduler.add_job(card_holder_alert_1, CronTrigger(day_of_week='thu', hour=18, minute=0), id="card_holder_alert_1", **common_job_kwargs)
+    scheduler.add_job(card_holder_alert_2, CronTrigger(day_of_week='fri', hour=20, minute=0), id="card_holder_alert_2", **common_job_kwargs)
+
+
     
     # await jam_poll()
-    # await card_holder_poll()
+    await card_holder_poll()
     scheduler.start()
 
 
