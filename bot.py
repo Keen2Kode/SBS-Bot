@@ -7,6 +7,7 @@ from discord.ext.commands import Context
 from datetime import datetime, timedelta
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from jam_commands import JamCommands
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
@@ -24,6 +25,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 async def on_ready():
     print(f'{bot.user} is ready')
 
+    await bot.add_cog(JamCommands(bot))
     scheduler = AsyncIOScheduler(timezone=ZoneInfo("Australia/Melbourne"))
     common_job_kwargs = {
         "replace_existing": True,
@@ -43,8 +45,10 @@ async def on_ready():
 
 
 
-# @bot.command()
-# async def card_holder_alert_2(ctx: Context):
+@bot.command()
+async def card_holder_alert_2(ctx: Context):
+    await card_holder_alert_2()
+    
 async def card_holder_alert_2():
     print(f'card holder alert 2 entered')
     card_holder_channel = jam_channel('card-holders')
@@ -66,8 +70,14 @@ async def card_holder_alert_2():
     for channel in channels:
         await channel.send(f"Staff is unavailable to open the space for this week. Please reach out to the SBS team for confirmation.")
 
-# @bot.command()
-# async def card_holder_alert_1(ctx: Context):
+
+
+
+
+@bot.command()
+async def card_holder_alert_1(ctx: Context):
+    await card_holder_alert_1()
+
 async def card_holder_alert_1():    
     print(f'card holder alert 1 entered')
     card_holder_channel = jam_channel('card-holders')
@@ -90,6 +100,10 @@ async def no_card_holder_day_answers(card_holder_channel: discord.TextChannel) -
     return None
 
 
+@bot.command()
+async def card_holder_poll(ctx: Context):
+    await card_holder_poll()
+
 async def card_holder_poll():
     print(f'card holder poll entered')
     card_holder_channel = jam_channel('card-holders')
@@ -101,6 +115,12 @@ async def card_holder_poll():
     p.add_answer(text='Saturday 12pm')
     p.add_answer(text='Sunday 12pm')
     await card_holder_channel.send(poll=p)    
+
+
+
+@bot.command()
+async def jam_poll(ctx: Context):
+    await jam_poll()
 
 async def jam_poll():
     print(f'jam poll entered')
