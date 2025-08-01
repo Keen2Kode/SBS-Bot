@@ -21,6 +21,7 @@ intents.members = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 
+
 @bot.event
 async def on_ready():
     print(f'{bot.user} is ready')
@@ -42,6 +43,28 @@ async def on_ready():
     # await jam_poll()
     # await card_holder_poll()
     scheduler.start()
+
+
+
+@bot.check
+async def globally_block_commands(ctx):
+    if ctx.channel and ctx.channel in bot_channels():
+        return True
+    raise commands.CheckFailure("Please use this bot only in the designated bot channels.")
+
+# only let the bot command error send a message
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CheckFailure):
+        await ctx.send(str(error))
+    else:
+        raise error  # Let other errors surface normally
+    
+
+
+
+
+
 
 
 
@@ -144,5 +167,15 @@ def jam_channel(channel_name):
             if channel.category and channel.category.name == "Jams" and channel.name == channel_name:
                     return channel
     return None
+
+def bot_channels():
+    channels = []
+    for guild in bot.guilds:
+        for channel in guild.text_channels:
+            if channel.name.startswith("bot"):
+                channels.append(channel)
+    return channels
+
+
 
 bot.run(TOKEN)
