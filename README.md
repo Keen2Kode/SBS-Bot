@@ -26,13 +26,16 @@ On **Friday at 8 PM**, if any jam session does **not have a card holder availabl
 
 ---
 
-### ℹ️ 2. Jam Info Command
+### ℹ️ 2. Jam Commands
 
 The `!jam_info` command sends a detailed message explaining how jam sessions work, with helpful links to:
 - The Creative Space location
 - The shared Jam Songs spreadsheet
 
-This message helps new members understand how to participate and prepare for weekly jam sessions.
+The `!jam_songs <sheet_name> <song_amount>` command lists the top 10 songs from the specified sheet (`Jazz`, `Rock`, `Pop`), sorted by its **Vote Rank** on Youtube.  
+- Pulls live song data from the shared Jam Songs spreadsheet, whose songs are first added to a youtube playlist.  
+- Displays song titles, vote counts, and status in a clean embedded format  
+- Helps members see the most popular songs for upcoming sessions
 
 ---
 

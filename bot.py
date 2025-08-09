@@ -38,10 +38,11 @@ async def on_ready():
     scheduler.add_job(card_holder_alert_1, CronTrigger(day_of_week='thu', hour=18, minute=0), id="card_holder_alert_1", **common_job_kwargs)
     scheduler.add_job(card_holder_alert_2, CronTrigger(day_of_week='fri', hour=20, minute=0), id="card_holder_alert_2", **common_job_kwargs)
 
-
-    
     # await jam_poll()
     # await card_holder_poll()
+    # await card_holder_alert_1()
+    # await card_holder_alert_2()
+    
     scheduler.start()
 
 
@@ -67,10 +68,19 @@ async def on_command_error(ctx, error):
 
 
 
+async def card_holder_alert_1():    
+    print(f'card holder alert 1 entered')
+    card_holder_channel = jam_channel('card-holders')
 
-@bot.command()
-async def card_holder_alert_2(ctx: Context):
-    await card_holder_alert_2()
+    answers_empty_flags = await no_card_holder_day_answers(card_holder_channel)
+
+    if answers_empty_flags is None:
+        await card_holder_channel.send("No active Card Holder poll found.")
+        return
+    
+    for answer in answers_empty_flags:
+        await card_holder_channel.send(f"No one is available on {answer.text}!"
+        " A message will be sent to the relevant jam channel on Friday if no one is available.")
     
 async def card_holder_alert_2():
     print(f'card holder alert 2 entered')
@@ -94,39 +104,6 @@ async def card_holder_alert_2():
         await channel.send(f"Staff is unavailable to open the space for this week. Please reach out to the SBS team for confirmation.")
 
 
-
-
-
-@bot.command()
-async def card_holder_alert_1(ctx: Context):
-    await card_holder_alert_1()
-
-async def card_holder_alert_1():    
-    print(f'card holder alert 1 entered')
-    card_holder_channel = jam_channel('card-holders')
-
-    answers_empty_flags = await no_card_holder_day_answers(card_holder_channel)
-
-    if answers_empty_flags is None:
-        await card_holder_channel.send("No active Card Holder poll found.")
-        return
-    
-    for answer in answers_empty_flags:
-        await card_holder_channel.send(f"No one is available on {answer.text}!"
-        " A message will be sent to the relevant jam channel on Friday if no one is available.")
-
-    
-async def no_card_holder_day_answers(card_holder_channel: discord.TextChannel) -> list[discord.PollAnswer] | None:
-    async for message in card_holder_channel.history(limit=500):
-        if message.author == bot.user and message.poll and not message.poll.is_finalized():
-            return [answer for answer in message.poll.answers if answer.vote_count==0]
-    return None
-
-
-@bot.command()
-async def card_holder_poll(ctx: Context):
-    await card_holder_poll()
-
 async def card_holder_poll():
     print(f'card holder poll entered')
     card_holder_channel = jam_channel('card-holders')
@@ -138,12 +115,6 @@ async def card_holder_poll():
     p.add_answer(text='Saturday 12pm')
     p.add_answer(text='Sunday 12pm')
     await card_holder_channel.send(poll=p)    
-
-
-
-@bot.command()
-async def jam_poll(ctx: Context):
-    await jam_poll()
 
 async def jam_poll():
     print(f'jam poll entered')
@@ -160,6 +131,16 @@ async def jam_poll():
         for instrument in ["Guitar", "Piano", "Drums", "Bass", "Singing", "Other"]:
             p.add_answer(text=instrument)
         await channel.send(poll=p)
+
+
+
+
+
+async def no_card_holder_day_answers(card_holder_channel: discord.TextChannel) -> list[discord.PollAnswer] | None:
+    async for message in card_holder_channel.history(limit=500):
+        if message.author == bot.user and message.poll and not message.poll.is_finalized():
+            return [answer for answer in message.poll.answers if answer.vote_count==0]
+    return None
 
 def jam_channel(channel_name):
     for guild in bot.guilds:
