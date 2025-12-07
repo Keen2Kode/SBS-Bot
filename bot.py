@@ -39,17 +39,13 @@ async def on_ready():
 
 def genres() -> List[JamGenre]:
     channels = Channels(bot)
-    weekly_jam_embed = (
-        "https://media.discordapp.net/attachments/1385873633217482763/"
-        "1392466068928200734/image.png?ex=688df515&is=688ca395&hm=c4e7f24267"
-        "76a25d9d9918fed2d3dc343e7e66e39a81fd811ae9317c8672c1db&=&format=webp"
-        "&quality=lossless&width=671&height=839"
-    )
+    weekly_jam_embed = "assets/open_jams.webp"
+    girls_jam_embed = "assets/girls_jam.png"
 
     jazz = JamGenre("jazz", "Sunday (12-3pm)", weekly_jam_embed, channels, CronTrigger(day_of_week='mon', hour=12, minute=0))
     rock = JamGenre("rock", "Saturday (3-6pm)", weekly_jam_embed, channels, CronTrigger(day_of_week='mon', hour=12, minute=0))
     pop = JamGenre("pop", "Saturday (12-3pm)", weekly_jam_embed, channels, CronTrigger(day_of_week='mon', hour=12, minute=0))
-    girls = JamGenre("girls", "Sunday (3-6pm)", weekly_jam_embed, channels, CronTrigger(day="1st sun", hour=5, minute=0))
+    girls = JamGenre("girls", "Sunday (3-6pm)", girls_jam_embed, channels, CronTrigger(day="1st sun", hour=5, minute=0))
 
     return [jazz, rock, pop, girls]
 

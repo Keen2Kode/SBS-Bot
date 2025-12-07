@@ -92,24 +92,10 @@ class JamPolls(commands.Cog):
             p.add_answer(text='Sunday 12pm')
             await card_holder_channel.send(poll=p)    
 
-    # async def jam_poll(self):
-    #     print(f'jam poll entered')
-    #     mapping = {}
-    #     mapping['rock'] = (self.channels.jam('rock'), "Saturday (3-6pm)")
-    #     mapping['jazz'] = (self.channels.jam('jazz'), "Sunday (12-3pm)")
-    #     mapping['pop'] = (self.channels.jam('pop'), "Saturday (12-3pm)")
-
-    #     for name, (channel, time) in mapping.items():
-    #         p = discord.Poll(
-    #             question=f"Are you attending the {name.capitalize()} Jam this {time}? If YES, specify your instrument below for priority.",
-    #             duration=timedelta(days=5)
-    #         )
-    #         for instrument in ["Guitar", "Piano", "Drums", "Bass", "Singing", "Other"]:
-    #             p.add_answer(text=instrument)
-    #         await channel.send(poll=p)
 
     async def jam_poll(self, genre: JamGenre): 
         print(f'jam poll entered')
+
 
         p = discord.Poll(
             question=f"Are you attending the {genre.name.capitalize()} Jam this {genre.time}? If YES, specify your instrument below for priority.",
@@ -117,6 +103,8 @@ class JamPolls(commands.Cog):
         )
         for instrument in ["Guitar", "Piano", "Drums", "Bass", "Singing", "Other"]:
             p.add_answer(text=instrument)
+
+        await genre.channel.send(file=discord.File(genre.embedUrl))
         await genre.channel.send(poll=p)
 
 
