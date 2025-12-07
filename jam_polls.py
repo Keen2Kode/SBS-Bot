@@ -1,11 +1,13 @@
+from typing import List
 import discord
 from discord.ext import commands
-from discord.ext.commands import Context, bot
+from discord.ext.commands import Context
 from datetime import datetime, timedelta
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from jam_commands import JamCommands
 from channels import Channels
+from jam_genre import JamGenre
 
 # load_dotenv()
 # TOKEN = os.getenv("DISCORD_TOKEN")
@@ -20,17 +22,27 @@ from channels import Channels
 
 class JamPolls(commands.Cog):
 
-    def __init__(self, bot):
+    def __init__(self, bot, genres: List[JamGenre]):
         self.bot = bot
+        self.genres = genres
         self.channels = Channels(bot)
 
 
 
 
     @commands.command(name="jampoll")
-    async def jam_poll_cmd(self, ctx: Context):
-        if ctx.message.author.guild_permissions.administrator:
-            await self.jam_poll()
+    async def jam_poll_cmd(self, ctx: Context, genre_string: str = ""):
+        if not ctx.author.guild_permissions.administrator:
+            return
+
+        genre_string = genre_string.lower()
+
+        for genre in self.genres:
+            if genre.name.lower() == genre_string:
+                await self.jam_poll(genre)
+                return
+
+        await ctx.send(f"Unknown genre '{genre_string}'")
 
     @commands.command(name="committeepoll")
     async def card_holder_poll_cmd(self, ctx: Context):
@@ -56,7 +68,9 @@ class JamPolls(commands.Cog):
             "misfire_grace_time": 60
         }
 
-        scheduler.add_job(self.jam_poll, CronTrigger(day_of_week='mon', hour=12, minute=0), id="jam_poll", **common_job_kwargs)
+        for genre in self.genres:
+            scheduler.add_job(self.jam_poll, genre.interval, id=f"jam_poll_{genre.name}", kwargs={"genre": genre}, **common_job_kwargs)
+        # scheduler.add_job(self.jam_poll, CronTrigger(day_of_week='mon', hour=12, minute=0), id="jam_poll", **common_job_kwargs)
         scheduler.add_job(self.card_holder_poll, CronTrigger(day_of_week='mon', hour=12, minute=0), id="card_holder_poll", **common_job_kwargs)
         scheduler.add_job(self.card_holder_alert_1, CronTrigger(day_of_week='thu', hour=18, minute=0), id="card_holder_alert_1", **common_job_kwargs)
         scheduler.add_job(self.card_holder_alert_2, CronTrigger(day_of_week='fri', hour=20, minute=0), id="card_holder_alert_2", **common_job_kwargs)
@@ -78,21 +92,32 @@ class JamPolls(commands.Cog):
             p.add_answer(text='Sunday 12pm')
             await card_holder_channel.send(poll=p)    
 
-    async def jam_poll(self):
-        print(f'jam poll entered')
-        mapping = {}
-        mapping['rock'] = (self.channels.jam('rock'), "Saturday (3-6pm)")
-        mapping['jazz'] = (self.channels.jam('jazz'), "Sunday (12-3pm)")
-        mapping['pop'] = (self.channels.jam('pop'), "Saturday (12-3pm)")
+    # async def jam_poll(self):
+    #     print(f'jam poll entered')
+    #     mapping = {}
+    #     mapping['rock'] = (self.channels.jam('rock'), "Saturday (3-6pm)")
+    #     mapping['jazz'] = (self.channels.jam('jazz'), "Sunday (12-3pm)")
+    #     mapping['pop'] = (self.channels.jam('pop'), "Saturday (12-3pm)")
 
-        for name, (channel, time) in mapping.items():
-            p = discord.Poll(
-                question=f"Are you attending the {name.capitalize()} Jam this {time}? If YES, specify your instrument below for priority.",
-                duration=timedelta(days=5)
-            )
-            for instrument in ["Guitar", "Piano", "Drums", "Bass", "Singing", "Other"]:
-                p.add_answer(text=instrument)
-            await channel.send(poll=p)
+    #     for name, (channel, time) in mapping.items():
+    #         p = discord.Poll(
+    #             question=f"Are you attending the {name.capitalize()} Jam this {time}? If YES, specify your instrument below for priority.",
+    #             duration=timedelta(days=5)
+    #         )
+    #         for instrument in ["Guitar", "Piano", "Drums", "Bass", "Singing", "Other"]:
+    #             p.add_answer(text=instrument)
+    #         await channel.send(poll=p)
+
+    async def jam_poll(self, genre: JamGenre): 
+        print(f'jam poll entered')
+
+        p = discord.Poll(
+            question=f"Are you attending the {genre.name.capitalize()} Jam this {genre.time}? If YES, specify your instrument below for priority.",
+            duration=timedelta(days=5)
+        )
+        for instrument in ["Guitar", "Piano", "Drums", "Bass", "Singing", "Other"]:
+            p.add_answer(text=instrument)
+        await genre.channel.send(poll=p)
 
 
 
