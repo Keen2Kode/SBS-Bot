@@ -35,10 +35,10 @@ class JamPolls(commands.Cog):
         if not ctx.author.guild_permissions.administrator:
             return
 
-        genre_string = genre_string.lower()
+        genre_string = genre_string.casefold().strip()
 
         for genre in self.genres:
-            if genre.name.lower() == genre_string:
+            if genre_string in genre.name:
                 await self.jam_poll(genre)
                 return
 
@@ -94,15 +94,17 @@ class JamPolls(commands.Cog):
 
 
     async def jam_poll(self, genre: JamGenre): 
-        print(f'jam poll entered')
+        print(f'jam poll entered with genre ' + genre.name)
 
 
         p = discord.Poll(
-            question=f"Are you attending the {genre.name.capitalize()} Jam this {genre.time}? If YES, specify your instrument below for priority.",
+            question=f"Are you attending the {genre.name.capitalize()} Jam this {genre.time}?",
             duration=timedelta(days=5)
         )
-        for instrument in ["Guitar", "Piano", "Drums", "Bass", "Singing", "Other"]:
-            p.add_answer(text=instrument)
+        p.add_answer(text="Yes")
+        p.add_answer(text="No")
+        # for instrument in ["Guitar", "Piano", "Drums", "Bass", "Singing", "Other"]:
+        #     p.add_answer(text=instrument)
 
         await genre.channel.send(file=discord.File(genre.embedUrl))
         await genre.channel.send(poll=p)

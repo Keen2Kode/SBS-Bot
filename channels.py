@@ -7,9 +7,14 @@ class Channels:
         self.bot: Bot = bot
 
     def jam(self, name):
+        if name is None:
+            return None
+        
         for guild in self.bot.guilds:
             for channel in guild.text_channels:
-                if channel.category and channel.category.name == "Jams" and channel.name == name:
+                if (channel.category 
+                    and channel.category.name == "Jams" 
+                    and name.strip().casefold() in channel.name.strip().casefold()):
                     return channel
         return None
     

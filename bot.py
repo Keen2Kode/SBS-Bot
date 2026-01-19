@@ -39,15 +39,13 @@ async def on_ready():
 
 def genres() -> List[JamGenre]:
     channels = Channels(bot)
-    weekly_jam_embed = "assets/open_jams.webp"
-    girls_jam_embed = "assets/girls_jam.png"
 
-    jazz = JamGenre("jazz", "Sunday (12-3pm)", weekly_jam_embed, channels, CronTrigger(day_of_week='mon', hour=12, minute=0))
-    rock = JamGenre("rock", "Saturday (3-6pm)", weekly_jam_embed, channels, CronTrigger(day_of_week='mon', hour=12, minute=0))
-    pop = JamGenre("pop", "Saturday (12-3pm)", weekly_jam_embed, channels, CronTrigger(day_of_week='mon', hour=12, minute=0))
-    girls = JamGenre("girls", "Sunday (3-6pm)", girls_jam_embed, channels, CronTrigger(day="1st sun", hour=5, minute=0))
+    jazz = JamGenre("jazz", "Sunday (1-3pm)", "assets/jazz_jam.png", channels, CronTrigger(day_of_week='mon', hour=12, minute=0))
+    rock = JamGenre("rock", "Saturday (3-6pm)", "assets/rock_jam.png", channels, CronTrigger(day_of_week='mon', hour=12, minute=0))
+    pop = JamGenre("pop", "Saturday (1-3pm)", "assets/open_jams.png", channels, CronTrigger(day='last mon', hour=5, minute=0))
+    girls = JamGenre("girls-jam", "Saturday (1-3pm)", "assets/girls_jam.png", channels, CronTrigger(day="last mon", hour=5, minute=0))
 
-    return [jazz, rock, pop, girls]
+    return [jazz, rock, girls]
 
 
 
