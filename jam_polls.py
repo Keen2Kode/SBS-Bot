@@ -70,27 +70,35 @@ class JamPolls(commands.Cog):
 
         for genre in self.genres:
             scheduler.add_job(self.jam_poll, genre.interval, id=f"jam_poll_{genre.name}", kwargs={"genre": genre}, **common_job_kwargs)
-        # scheduler.add_job(self.jam_poll, CronTrigger(day_of_week='mon', hour=12, minute=0), id="jam_poll", **common_job_kwargs)
+            # scheduler.add_job(
+            #     self.jam_poll,
+            #     CronTrigger(second="*/59"), 
+            #     id=f"jam_poll_test_{genre.name}",
+            #     kwargs={"genre": genre},
+            #     **common_job_kwargs
+            # )
+
         scheduler.add_job(self.card_holder_poll, CronTrigger(day_of_week='mon', hour=12, minute=0), id="card_holder_poll", **common_job_kwargs)
         scheduler.add_job(self.card_holder_alert_1, CronTrigger(day_of_week='thu', hour=18, minute=0), id="card_holder_alert_1", **common_job_kwargs)
         scheduler.add_job(self.card_holder_alert_2, CronTrigger(day_of_week='fri', hour=20, minute=0), id="card_holder_alert_2", **common_job_kwargs)
-
         return scheduler
 
 
 
     async def card_holder_poll(self):
-            print(f'card holder poll entered')
-            card_holder_channel = self.channels.committee()
+        print(f'card holder poll entered')
+        card_holder_channel = self.channels.committee()
 
-            p = discord.Poll(
-                question=f"Card Holders, are you available to open the space at the following times?",
-                duration=timedelta(days=5),
-                multiple=True
-            )
-            p.add_answer(text='Saturday 12pm')
-            p.add_answer(text='Sunday 12pm')
-            await card_holder_channel.send(poll=p)    
+        p = discord.Poll(
+            question=f"Card Holders, when are you available to open the space?",
+            duration=timedelta(days=5),
+            multiple=True
+        )
+        p.add_answer(text='Saturday')
+        p.add_answer(text='Sunday')
+        await card_holder_channel.send(poll=p) 
+        await card_holder_channel.send(f"You can check the required opening time from the earliest booking in the [Bookings Calendar.](https://calendar.google.com/calendar/u/0/embed?src=rmitsbs@gmail.com&ctz=Australia/Melbourne)")
+          
 
 
     async def jam_poll(self, genre: JamGenre): 

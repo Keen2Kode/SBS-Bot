@@ -6,7 +6,7 @@ class Channels:
     def __init__(self, bot: Bot):
         self.bot: Bot = bot
 
-    def jam(self, name):
+    def jam(self, name: str):
         if name is None:
             return None
         

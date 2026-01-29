@@ -36,6 +36,7 @@ async def on_ready():
     jam_polls = bot.get_cog("JamPolls")
     await jam_polls.add_scheduled_polls(scheduler)
     scheduler.start()
+    scheduler.print_jobs()
 
 def genres() -> List[JamGenre]:
     channels = Channels(bot)
