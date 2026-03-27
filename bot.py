@@ -12,6 +12,7 @@ from jam_commands import JamCommands
 from jam_genre import JamGenre
 from jam_polls import JamPolls
 from channels import Channels
+from calendar_context import CalendarContext
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
@@ -29,6 +30,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 @bot.event
 async def on_ready():
     print(f'{bot.user} is ready')
+    calendar = CalendarContext().print_events()
     await bot.add_cog(JamCommands(bot))
     await bot.add_cog(JamPolls(bot, genres()))
     scheduler = AsyncIOScheduler(timezone=ZoneInfo("Australia/Melbourne"))
