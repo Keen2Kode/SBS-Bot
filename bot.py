@@ -11,6 +11,7 @@ from apscheduler.triggers.cron import CronTrigger
 from jam_commands import JamCommands
 from jam_genre import JamGenre
 from jam_polls import JamPolls
+from event import Event
 from channels import Channels
 from calendar_context import CalendarContext
 
@@ -30,9 +31,11 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 @bot.event
 async def on_ready():
     print(f'{bot.user} is ready')
-    calendar = CalendarContext().print_events()
     await bot.add_cog(JamCommands(bot))
-    await bot.add_cog(JamPolls(bot, genres()))
+    # await bot.add_cog(JamPolls(bot, genres()))
+    await bot.add_cog(JamPolls(bot, CalendarContext().next_discord_events()))
+
+
     scheduler = AsyncIOScheduler(timezone=ZoneInfo("Australia/Melbourne"))
 
     jam_polls = bot.get_cog("JamPolls")
@@ -40,15 +43,16 @@ async def on_ready():
     scheduler.start()
     scheduler.print_jobs()
 
-def genres() -> List[JamGenre]:
-    channels = Channels(bot)
+# OLD: to remove, replace with calendar's events
+# def genres() -> List[JamGenre]:
+#     channels = Channels(bot)
 
-    jazz = JamGenre("jazz", "Sunday (1-3pm)", "assets/jazz_jam.png", channels, CronTrigger(day_of_week='mon', hour=12, minute=0))
-    rock = JamGenre("rock", "Saturday (3-6pm)", "assets/rock_jam.png", channels, CronTrigger(day_of_week='mon', hour=12, minute=0))
-    pop = JamGenre("pop", "Saturday (1-3pm)", "assets/open_jams.png", channels, CronTrigger(day='last mon', hour=5, minute=0))
-    girls = JamGenre("girls-jam", "Saturday (1-3pm)", "assets/girls_jam.png", channels, CronTrigger(day="last mon", hour=5, minute=0))
+#     jazz = JamGenre("jazz", "Sunday (1-3pm)", "assets/jazz_jam.png", channels, CronTrigger(day_of_week='mon', hour=12, minute=0))
+#     rock = JamGenre("rock", "Saturday (3-6pm)", "assets/rock_jam.png", channels, CronTrigger(day_of_week='mon', hour=12, minute=0))
+#     pop = JamGenre("pop", "Saturday (1-3pm)", "assets/open_jams.png", channels, CronTrigger(day='last mon', hour=5, minute=0))
+#     girls = JamGenre("girls-jam", "Saturday (1-3pm)", "assets/girls_jam.png", channels, CronTrigger(day="last mon", hour=5, minute=0))
 
-    return [jazz, rock, girls]
+#     return [jazz, rock, girls]
 
 
 

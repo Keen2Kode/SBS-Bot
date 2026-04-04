@@ -5,6 +5,7 @@ from discord.ext.commands import Context
 from datetime import datetime, timedelta
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from event import Event
 from jam_commands import JamCommands
 from channels import Channels
 from jam_genre import JamGenre
@@ -27,22 +28,27 @@ class JamPolls(commands.Cog):
         self.genres = genres
         self.channels = Channels(bot)
 
+    def __init__(self, bot, events: List[Event]):
+        self.bot = bot
+        self.events = events
+        self.channels = Channels(bot)
 
 
 
-    @commands.command(name="jampoll")
-    async def jam_poll_cmd(self, ctx: Context, genre_string: str = ""):
-        if not ctx.author.guild_permissions.administrator:
-            return
 
-        genre_string = genre_string.casefold().strip()
+    # @commands.command(name="jampoll")
+    # async def jam_poll_cmd(self, ctx: Context, genre_string: str = ""):
+    #     if not ctx.author.guild_permissions.administrator:
+    #         return
 
-        for genre in self.genres:
-            if genre_string in genre.name:
-                await self.jam_poll(genre)
-                return
+    #     genre_string = genre_string.casefold().strip()
 
-        await ctx.send(f"Unknown genre '{genre_string}'")
+    #     for genre in self.genres:
+    #         if genre_string in genre.name:
+    #             await self.jam_poll(genre)
+    #             return
+
+    #     await ctx.send(f"Unknown genre '{genre_string}'")
 
     @commands.command(name="committeepoll")
     async def card_holder_poll_cmd(self, ctx: Context):
@@ -63,26 +69,63 @@ class JamPolls(commands.Cog):
 
 
     async def add_scheduled_polls(self, scheduler: AsyncIOScheduler):
+
+        #TODO: what if someone deletes an event, how to remove it from scheduled after added
         common_job_kwargs = {
             "replace_existing": True,
             "misfire_grace_time": 60
         }
 
-        for genre in self.genres:
-            scheduler.add_job(self.jam_poll, genre.interval, id=f"jam_poll_{genre.name}", kwargs={"genre": genre}, **common_job_kwargs)
-            # scheduler.add_job(
-            #     self.jam_poll,
-            #     CronTrigger(second="*/59"), 
-            #     id=f"jam_poll_test_{genre.name}",
-            #     kwargs={"genre": genre},
-            #     **common_job_kwargs
-            # )
 
-        scheduler.add_job(self.card_holder_poll, CronTrigger(day_of_week='mon', hour=12, minute=0), id="card_holder_poll", **common_job_kwargs)
-        scheduler.add_job(self.card_holder_alert_1, CronTrigger(day_of_week='thu', hour=18, minute=0), id="card_holder_alert_1", **common_job_kwargs)
-        scheduler.add_job(self.card_holder_alert_2, CronTrigger(day_of_week='fri', hour=20, minute=0), id="card_holder_alert_2", **common_job_kwargs)
+        for event in self.events:
+            # run immediately
+            scheduler.add_job(self.event_poll, 
+                id=f"event_test_{event.id}", 
+                trigger="date", 
+                run_date=None, 
+                kwargs={"event": event}, 
+                **common_job_kwargs
+            )
+            
+        # TO REMOVE: outdated
+        # for genre in self.genres:
+        #     scheduler.add_job(self.jam_poll, genre.interval, id=f"jam_poll_{genre.name}", kwargs={"genre": genre}, **common_job_kwargs)
+        #     # scheduler.add_job(
+        #     #     self.jam_poll,
+        #     #     CronTrigger(second="*/59"), 
+        #     #     id=f"jam_poll_test_{genre.name}",
+        #     #     kwargs={"genre": genre},
+        #     #     **common_job_kwargs
+        #     # )
+
+        # scheduler.add_job(self.card_holder_poll, CronTrigger(day_of_week='mon', hour=12, minute=0), id="card_holder_poll", **common_job_kwargs)
+        # scheduler.add_job(self.card_holder_alert_1, CronTrigger(day_of_week='thu', hour=18, minute=0), id="card_holder_alert_1", **common_job_kwargs)
+        # scheduler.add_job(self.card_holder_alert_2, CronTrigger(day_of_week='fri', hour=20, minute=0), id="card_holder_alert_2", **common_job_kwargs)
         return scheduler
 
+    async def event_poll(self, event: Event): 
+        print(f'event added to discord ' + event.title)
+
+
+        p = discord.Poll(
+            question=f"Are you attending this Event?",
+            duration=timedelta(days=5)
+        )
+        p.add_answer(text="Yes")
+        p.add_answer(text="No") 
+
+
+
+        channel = self.channels.get_channel(event.channel_name)
+
+        if not channel:
+            bot_channel = self.channels.bot_channels()[0]
+            await bot_channel.send(f"specified channel to post this event {event.title} not found.")
+        else:
+            if event.embed_url:
+                await channel.send(file=discord.File(event.embed_url))
+            await channel.send(content=event.human_description())
+            await channel.send(poll=p)
 
 
     async def card_holder_poll(self):
@@ -101,21 +144,19 @@ class JamPolls(commands.Cog):
           
 
 
-    async def jam_poll(self, genre: JamGenre): 
-        print(f'jam poll entered with genre ' + genre.name)
+    # async def jam_poll(self, genre: JamGenre): 
+    #     print(f'jam poll entered with genre ' + genre.name)
 
 
-        p = discord.Poll(
-            question=f"Are you attending the {genre.name.capitalize()} Jam this {genre.time}?",
-            duration=timedelta(days=5)
-        )
-        p.add_answer(text="Yes")
-        p.add_answer(text="No")
-        # for instrument in ["Guitar", "Piano", "Drums", "Bass", "Singing", "Other"]:
-        #     p.add_answer(text=instrument)
+    #     p = discord.Poll(
+    #         question=f"Are you attending the {genre.name.capitalize()} Jam this {genre.time}?",
+    #         duration=timedelta(days=5)
+    #     )
+    #     p.add_answer(text="Yes")
+    #     p.add_answer(text="No") 
 
-        await genre.channel.send(file=discord.File(genre.embedUrl))
-        await genre.channel.send(poll=p)
+    #     await genre.channel.send(file=discord.File(genre.embedUrl))
+    #     await genre.channel.send(poll=p)
 
 
 

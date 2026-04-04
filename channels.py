@@ -18,6 +18,17 @@ class Channels:
                     return channel
         return None
     
+    # if there's a name clash returns the first channel found
+    def get_channel(self, name: str):
+        if name is None:
+            return None
+        
+        for guild in self.bot.guilds:
+            for channel in guild.text_channels:
+                if name.strip().casefold() in channel.name.strip().casefold():
+                    return channel
+        return None
+    
     def committee(self):
         for guild in self.bot.guilds:
             for channel in guild.text_channels:
