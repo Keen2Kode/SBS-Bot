@@ -28,9 +28,8 @@ class JamPolls(commands.Cog):
         self.genres = genres
         self.channels = Channels(bot)
 
-    def __init__(self, bot, events: List[Event]):
+    def __init__(self, bot):
         self.bot = bot
-        self.events = events
         self.channels = Channels(bot)
 
 
@@ -68,24 +67,41 @@ class JamPolls(commands.Cog):
 
 
 
-    async def add_scheduled_polls(self, scheduler: AsyncIOScheduler):
+    async def add_scheduled_polls(self, scheduler: AsyncIOScheduler, events: List[Event], cancelled_event_ids: List[str]):
+        # case 1: restart before event (job alr scheduled)
+        #   job gets replaced/updated ("replace_existing")
+        # case 2: restart after event (job already ran)
+        #   run date in past
+        # case 3: restart after event (missed job)
+        #   misfire_grace_time
 
-        #TODO: what if someone deletes an event, how to remove it from scheduled after added
+        day_duration = 86400
         common_job_kwargs = {
             "replace_existing": True,
-            "misfire_grace_time": 60
+            "misfire_grace_time": day_duration*4
         }
 
+        for id in cancelled_event_ids:
+            scheduler.remove_job(job_id=id)
 
-        for event in self.events:
-            # run immediately
-            scheduler.add_job(self.event_poll, 
-                id=f"event_test_{event.id}", 
-                trigger="date", 
-                run_date=None, 
-                kwargs={"event": event}, 
+        for event in events:
+            # # run immediately
+            # scheduler.add_job(self.event_poll, 
+            #     id=event.id, 
+            #     trigger="date", 
+            #     run_date=None, 
+            #     kwargs={"event": event}, 
+            #     **common_job_kwargs
+            # )
+            scheduler.add_job(
+                self.event_poll,
+                id=event.id,
+                trigger="date",
+                run_date=event.start,
+                kwargs={"event": event},
                 **common_job_kwargs
             )
+        
             
         # TO REMOVE: outdated
         # for genre in self.genres:

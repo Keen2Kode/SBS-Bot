@@ -1,3 +1,5 @@
+import asyncio
+from asyncio import tasks
 import os
 from typing import List
 import discord
@@ -30,18 +32,25 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 @bot.event
 async def on_ready():
+
     print(f'{bot.user} is ready')
-    await bot.add_cog(JamCommands(bot))
+
+
     # await bot.add_cog(JamPolls(bot, genres()))
-    await bot.add_cog(JamPolls(bot, CalendarContext().next_discord_events()))
+    await bot.add_cog(JamCommands(bot))
+    await bot.add_cog(JamPolls(bot))
 
-
+    calendar_ctx = CalendarContext()
+    jam_polls: JamPolls = bot.get_cog("JamPolls")
     scheduler = AsyncIOScheduler(timezone=ZoneInfo("Australia/Melbourne"))
-
-    jam_polls = bot.get_cog("JamPolls")
-    await jam_polls.add_scheduled_polls(scheduler)
     scheduler.start()
-    scheduler.print_jobs()
+
+    schedule_jobs.start(calendar_ctx, scheduler, jam_polls)
+
+@tasks.loop(seconds=60)
+async def schedule_jobs(calendar_ctx: CalendarContext, scheduler: AsyncIOScheduler, jam_polls: JamPolls):
+    events, cancelled_event_ids = calendar_ctx.next_discord_events()
+    await jam_polls.add_scheduled_polls(scheduler, events, cancelled_event_ids)
 
 # OLD: to remove, replace with calendar's events
 # def genres() -> List[JamGenre]:

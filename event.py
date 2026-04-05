@@ -50,19 +50,7 @@ class Event:
             obj.get("dateTime") or obj.get("date")
         )
     
-    def valid_url_or_none(self, url):
 
-        if not url:
-            return None
-
-        try:
-            result = urlparse(url)
-            if result.scheme in ("http", "https") and result.netloc:
-                return url
-        except:
-            pass
-
-        return None
 
 
 
