@@ -10,23 +10,10 @@ from jam_commands import JamCommands
 from channels import Channels
 from jam_genre import JamGenre
 
-# load_dotenv()
-# TOKEN = os.getenv("DISCORD_TOKEN")
 
-# intents = discord.Intents.default()
-# intents.message_content = True  # Required to read message content
-# intents.guilds = True
-# intents.guild_messages = True
-# intents.members = True
-
-# bot = commands.Bot(command_prefix='!', intents=intents)
 
 class JamPolls(commands.Cog):
 
-    def __init__(self, bot, genres: List[JamGenre]):
-        self.bot = bot
-        self.genres = genres
-        self.channels = Channels(bot)
 
     def __init__(self, bot):
         self.bot = bot
@@ -102,17 +89,6 @@ class JamPolls(commands.Cog):
                 **common_job_kwargs
             )
         
-            
-        # TO REMOVE: outdated
-        # for genre in self.genres:
-        #     scheduler.add_job(self.jam_poll, genre.interval, id=f"jam_poll_{genre.name}", kwargs={"genre": genre}, **common_job_kwargs)
-        #     # scheduler.add_job(
-        #     #     self.jam_poll,
-        #     #     CronTrigger(second="*/59"), 
-        #     #     id=f"jam_poll_test_{genre.name}",
-        #     #     kwargs={"genre": genre},
-        #     #     **common_job_kwargs
-        #     # )
 
         # scheduler.add_job(self.card_holder_poll, CronTrigger(day_of_week='mon', hour=12, minute=0), id="card_holder_poll", **common_job_kwargs)
         # scheduler.add_job(self.card_holder_alert_1, CronTrigger(day_of_week='thu', hour=18, minute=0), id="card_holder_alert_1", **common_job_kwargs)
@@ -160,19 +136,6 @@ class JamPolls(commands.Cog):
           
 
 
-    # async def jam_poll(self, genre: JamGenre): 
-    #     print(f'jam poll entered with genre ' + genre.name)
-
-
-    #     p = discord.Poll(
-    #         question=f"Are you attending the {genre.name.capitalize()} Jam this {genre.time}?",
-    #         duration=timedelta(days=5)
-    #     )
-    #     p.add_answer(text="Yes")
-    #     p.add_answer(text="No") 
-
-    #     await genre.channel.send(file=discord.File(genre.embedUrl))
-    #     await genre.channel.send(poll=p)
 
 
 
