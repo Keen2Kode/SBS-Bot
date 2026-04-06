@@ -21,7 +21,7 @@ class CalendarContext:
     For creating event notifications directly from the calendar event
     """
 
-    def __init__(self, timezone: ZoneInfo):
+    def __init__(self, timezone: ZoneInfo, reminder_window: timedelta):
         creds = Credentials.from_service_account_file(
             filename="gcloud-service-account-credentials.json",
             scopes=["https://www.googleapis.com/auth/calendar.readonly"]
@@ -31,6 +31,7 @@ class CalendarContext:
         self.calendar = self.service.calendars().get(calendarId=self.calendar_owner).execute()
         self.timezone = timezone
         self.sent_events = set()
+        self.reminder_window = reminder_window
 
         self.url = "https://calendar.google.com/calendar/u/0?cid=cm1pdHNic0BnbWFpbC5jb20"
 
@@ -97,10 +98,10 @@ class CalendarContext:
         # will only affect the events to add next time around
         self.sent_events.update(events)
         
-        # remove sent events once you crossed the date
-        # TODO: ALSO keep out events that have not yet reached reminder window (see jam_poll class)
-        # aka if the event changes, its job can still be updated
-        self.sent_events = {e for e in self.sent_events if self.now() < e.start}
+        # events whose jobs have already completed and removed from job store
+        # self.events() updating should not readd the same event back to the scheduler
+        self.sent_events = {e for e in self.sent_events 
+            if (e.start - self.reminder_window) <= self.now() < e.start}
 
     def to_event(self, event) -> Event:
         

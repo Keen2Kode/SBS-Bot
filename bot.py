@@ -30,9 +30,9 @@ class JamBot(commands.Bot):
 
         # persistent state
         self.timezone = ZoneInfo("Australia/Melbourne")
-        self.calendar_ctx = CalendarContext(self.timezone)
-        self.scheduler = AsyncIOScheduler(timezone=self.timezone)
         self.reminder_window = timedelta(days=7)
+        self.calendar_ctx = CalendarContext(self.timezone, self.reminder_window)
+        self.scheduler = AsyncIOScheduler(timezone=self.timezone)
 
         # in set up hook
         self.scheduler_service: SchedulerService | None = None
@@ -55,7 +55,9 @@ class JamBot(commands.Bot):
             self.reminder_window
         )
 
+        # don't worry about on_ready(), these are static tasks
         self.scheduler.start()
+        self.scheduler_service.schedule_cardholder_jobs()
         self.schedule_jobs_loop.start()
 
     async def on_ready(self):
@@ -71,7 +73,7 @@ class JamBot(commands.Bot):
         # that data will not reflect in the final discord post
         # because calendar_context.sent_events simply adds all events id
         # and anything in sent_events gets skipped, even if updated
-        await self.scheduler_service.sync_jobs()
+        await self.scheduler_service.sync_event_jobs()
 
 
 bot = JamBot()
