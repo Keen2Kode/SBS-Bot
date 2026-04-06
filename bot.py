@@ -1,85 +1,83 @@
-import asyncio
-from asyncio import tasks
 import os
-from typing import List
-import discord
 from zoneinfo import ZoneInfo
+import discord
 from dotenv import load_dotenv
-from discord.ext import commands
-from discord.ext.commands import Context
-from datetime import datetime, timedelta
+from discord.ext import commands, tasks
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
+
 from jam_commands import JamCommands
-from jam_genre import JamGenre
 from jam_polls import JamPolls
-from event import Event
 from channels import Channels
 from calendar_context import CalendarContext
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 
-intents = discord.Intents.default()
-intents.message_content = True  # Required to read message content
-intents.guilds = True
-intents.guild_messages = True
-intents.members = True
 
-bot = commands.Bot(command_prefix='!', intents=intents)
+class JamBot(commands.Bot):
+
+    # for non async stuff and stuff that can be prepped before Discord is ready
+    def __init__(self):
+        intents = discord.Intents.default()
+        intents.message_content = True
+        intents.guilds = True
+        intents.guild_messages = True
+        intents.members = True
+
+        super().__init__(command_prefix='!', intents=intents)
+
+        # persistent state
+        self.timezone = ZoneInfo("Australia/Melbourne")
+        self.calendar_ctx = CalendarContext(self.timezone)
+        self.scheduler = AsyncIOScheduler(timezone=self.timezone)
+
+    # runs exactly once per process
+    # initialize async stuff
+    async def setup_hook(self):
+        # runs exactly once per process
+
+        await self.add_cog(JamCommands(self))
+        await self.add_cog(JamPolls(self, self.calendar_ctx))
+
+        self.scheduler.start()
+
+        self.schedule_jobs_loop.start()
+
+    async def on_ready(self):
+        print(f'{self.user} is ready')
+
+    @tasks.loop(hours=4)
+    async def schedule_jobs_loop(self):
+        if not self.is_ready():
+            return
+        print("get next event set")
+
+        #BUG: if an event has an added job, but it then changes data, 
+        # that data will not reflect in the final discord post
+        # because calendar_context.sent_events simply adds all events id
+        # and anything in sent_events gets skipped, even if updated
+        jam_polls: JamPolls = self.get_cog("JamPolls")
+        await jam_polls.add_scheduled_polls(self.scheduler)
 
 
-
-@bot.event
-async def on_ready():
-
-    print(f'{bot.user} is ready')
-
-
-    # await bot.add_cog(JamPolls(bot, genres()))
-    await bot.add_cog(JamCommands(bot))
-    await bot.add_cog(JamPolls(bot))
-
-    calendar_ctx = CalendarContext()
-    jam_polls: JamPolls = bot.get_cog("JamPolls")
-    scheduler = AsyncIOScheduler(timezone=ZoneInfo("Australia/Melbourne"))
-    scheduler.start()
-
-    schedule_jobs.start(calendar_ctx, scheduler, jam_polls)
-
-@tasks.loop(seconds=60)
-async def schedule_jobs(calendar_ctx: CalendarContext, scheduler: AsyncIOScheduler, jam_polls: JamPolls):
-    events, cancelled_event_ids = calendar_ctx.next_discord_events()
-    await jam_polls.add_scheduled_polls(scheduler, events, cancelled_event_ids)
-
-# OLD: to remove, replace with calendar's events
-# def genres() -> List[JamGenre]:
-#     channels = Channels(bot)
-
-#     jazz = JamGenre("jazz", "Sunday (1-3pm)", "assets/jazz_jam.png", channels, CronTrigger(day_of_week='mon', hour=12, minute=0))
-#     rock = JamGenre("rock", "Saturday (3-6pm)", "assets/rock_jam.png", channels, CronTrigger(day_of_week='mon', hour=12, minute=0))
-#     pop = JamGenre("pop", "Saturday (1-3pm)", "assets/open_jams.png", channels, CronTrigger(day='last mon', hour=5, minute=0))
-#     girls = JamGenre("girls-jam", "Saturday (1-3pm)", "assets/girls_jam.png", channels, CronTrigger(day="last mon", hour=5, minute=0))
-
-#     return [jazz, rock, girls]
-
+bot = JamBot()
 
 
 @bot.check
 async def globally_block_commands(ctx):
     if ctx.channel and ctx.channel in Channels(bot).bot_channels():
         return True
-    raise commands.CheckFailure("Please use this bot only in the designated bot channels.")
+    raise commands.CheckFailure(
+        "Please use this bot only in the designated bot channels."
+    )
 
-# only let the bot command error send a message
+
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
         await ctx.send(str(error))
     else:
-        raise error  # Let other errors surface normally
-    
-
+        raise error
 
 
 bot.run(TOKEN)

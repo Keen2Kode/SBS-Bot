@@ -2,7 +2,7 @@ import asyncio
 import json
 import os
 import re
-from typing import List
+from typing import List, Set
 import yaml
 from zoneinfo import ZoneInfo
 import discord
@@ -21,7 +21,7 @@ class CalendarContext:
     For creating event notifications directly from the calendar event
     """
 
-    def __init__(self):
+    def __init__(self, timezone: ZoneInfo):
         creds = Credentials.from_service_account_file(
             filename="gcloud-service-account-credentials.json",
             scopes=["https://www.googleapis.com/auth/calendar.readonly"]
@@ -29,16 +29,15 @@ class CalendarContext:
         self.service = build('calendar', 'v3', credentials=creds)
         self.calendar_owner = "rmitsbs@gmail.com"
         self.calendar = self.service.calendars().get(calendarId=self.calendar_owner).execute()
-
+        self.timezone = timezone
+        self.sent_events = set()
 
         self.url = "https://calendar.google.com/calendar/u/0?cid=cm1pdHNic0BnbWFpbC5jb20"
 
-        # to constantly update to match the latest calendar events
-        self.sync_token = None
 
 
     def now(self) -> datetime: 
-        return datetime.now(tz=ZoneInfo(self.calendar['timeZone']))
+        return datetime.now(tz=self.timezone)
     
     
     async def events(self):
@@ -65,7 +64,7 @@ class CalendarContext:
 
     async def next_discord_events(self):
         # recurring
-        recurring_ids: str = set()
+        recurring_ids: Set[str] = set()
         next_events: List[Event] = []
         to_delete: List[str] = []
 
@@ -78,17 +77,28 @@ class CalendarContext:
                 continue
 
             event = self.to_event(calendar_event)
-            if not event.is_discord_event:
+            if not event.need_to_add(self.sent_events, recurring_ids):
                 continue
 
-            # if recurring event only take the closest you find
-            if not event.is_recurring:
-                next_events.append(event)
-            elif event.recurring_id not in recurring_ids: 
+            # only use immediate next event
+            if event.recurring_id and event.recurring_id not in recurring_ids:
                 recurring_ids.add(event.recurring_id)
-                next_events.append(event)
+            
+            next_events.append(event)
+
+        self.update_sent_events(next_events)
 
         return next_events, to_delete
+    
+
+
+    def update_sent_events(self, events: List[Event]):
+        # add all events to sent events
+        # will only affect the events to add next time around
+        self.sent_events.update(events)
+        
+        # remove sent events once you crossed the date
+        self.sent_events = {e for e in self.sent_events if self.now() < e.start}
 
     def to_event(self, event) -> Event:
         
@@ -96,7 +106,7 @@ class CalendarContext:
         metadata = self.metadata(description)
         event["description"] = self.strip_metadata(description)
 
-        return Event(event, metadata)
+        return Event(event, metadata, self.timezone)
     
     def strip_metadata(self, description):
         return re.sub(r'--discord--\s*\n(.*)$', '', description, flags=re.S).strip()
