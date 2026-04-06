@@ -16,10 +16,9 @@ from jam_genre import JamGenre
 class JamPolls(commands.Cog):
 
 
-    def __init__(self, bot, calendar_ctx: CalendarContext):
+    def __init__(self, bot):
         self.bot = bot
         self.channels = Channels(bot)
-        self.calendar_ctx: CalendarContext = calendar_ctx
 
     @property
     def log_channel(self):
@@ -60,66 +59,6 @@ class JamPolls(commands.Cog):
 
 
 
-    async def add_scheduled_polls(self, scheduler: AsyncIOScheduler):
-        # case 1: restart before event (job alr scheduled)
-        #   job gets replaced/updated ("replace_existing")
-        # case 2: restart after event (job already ran)
-        #   run date in past
-        # case 3: restart after event (missed job)
-        #   misfire_grace_time
-
-
-        day_duration = 86400
-        common_job_kwargs = {
-            "replace_existing": True,
-            "misfire_grace_time": day_duration*4
-        }
-
-        events, cancelled_event_ids = await self.calendar_ctx.next_discord_events()
-        await self.remove_event_jobs(scheduler, cancelled_event_ids)
-        self.add_event_jobs(scheduler, common_job_kwargs, events, reminder_window=timedelta(days=7))
-        self.add_cardholder_jobs(scheduler, common_job_kwargs)
-        return scheduler
-
-    async def remove_event_jobs(self, scheduler, cancelled_event_ids):
-        for id in cancelled_event_ids:
-            job = scheduler.get_job(id)
-            if job:
-                event: Event = job.kwargs["event"]
-                await self.log_channel.send(f"removing event {event.title}")
-                scheduler.remove_job(id)
-
-    def add_event_jobs(
-        self, 
-        scheduler: AsyncIOScheduler, 
-        common_job_kwargs,
-        events: List[Event], 
-        reminder_window: timedelta
-    ):
-        for event in events:
-            run_time = event.get_run_time(reminder_window, self.now())
-
-            if not run_time:
-                continue
-
-            scheduler.add_job(
-                self.event_poll,
-                id=event.id,
-                trigger="date",
-                run_date=run_time,
-                kwargs={"event": event},
-                **common_job_kwargs
-            )
-
-    def add_cardholder_jobs(self, scheduler: AsyncIOScheduler, common_job_kwargs):
-        scheduler.add_job(self.card_holder_poll, CronTrigger(day_of_week='mon', hour=12, minute=0), id="card_holder_poll", **common_job_kwargs)
-        scheduler.add_job(self.card_holder_alert_1, CronTrigger(day_of_week='thu', hour=18, minute=0), id="card_holder_alert_1", **common_job_kwargs)
-        scheduler.add_job(self.card_holder_alert_2, CronTrigger(day_of_week='fri', hour=20, minute=0), id="card_holder_alert_2", **common_job_kwargs)
-
-
-
-    def now(self):
-        return datetime.now(tz=self.bot.timezone)
 
     async def event_poll(self, event: Event): 
         print(f'event added to discord ' + event.title)

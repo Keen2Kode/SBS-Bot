@@ -1,3 +1,4 @@
+from datetime import timedelta
 import os
 from zoneinfo import ZoneInfo
 import discord
@@ -9,6 +10,7 @@ from jam_commands import JamCommands
 from jam_polls import JamPolls
 from channels import Channels
 from calendar_context import CalendarContext
+from scheduler_service import SchedulerService
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
@@ -30,6 +32,10 @@ class JamBot(commands.Bot):
         self.timezone = ZoneInfo("Australia/Melbourne")
         self.calendar_ctx = CalendarContext(self.timezone)
         self.scheduler = AsyncIOScheduler(timezone=self.timezone)
+        self.reminder_window = timedelta(days=7)
+
+        # in set up hook
+        self.scheduler_service: SchedulerService | None = None
 
     # runs exactly once per process
     # initialize async stuff
@@ -37,16 +43,25 @@ class JamBot(commands.Bot):
         # runs exactly once per process
 
         await self.add_cog(JamCommands(self))
-        await self.add_cog(JamPolls(self, self.calendar_ctx))
+
+        jam_polls = JamPolls(self)
+        await self.add_cog(jam_polls)
+
+        self.scheduler_service = SchedulerService(
+            self.scheduler, 
+            self.calendar_ctx, 
+            jam_polls, 
+            self.timezone,
+            self.reminder_window
+        )
 
         self.scheduler.start()
-
         self.schedule_jobs_loop.start()
 
     async def on_ready(self):
         print(f'{self.user} is ready')
 
-    @tasks.loop(hours=4)
+    @tasks.loop(seconds=10)
     async def schedule_jobs_loop(self):
         if not self.is_ready():
             return
@@ -56,8 +71,7 @@ class JamBot(commands.Bot):
         # that data will not reflect in the final discord post
         # because calendar_context.sent_events simply adds all events id
         # and anything in sent_events gets skipped, even if updated
-        jam_polls: JamPolls = self.get_cog("JamPolls")
-        await jam_polls.add_scheduled_polls(self.scheduler)
+        await self.scheduler_service.sync_jobs()
 
 
 bot = JamBot()

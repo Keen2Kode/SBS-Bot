@@ -91,13 +91,15 @@ class CalendarContext:
         return next_events, to_delete
     
 
-
+    
     def update_sent_events(self, events: List[Event]):
         # add all events to sent events
         # will only affect the events to add next time around
         self.sent_events.update(events)
         
         # remove sent events once you crossed the date
+        # TODO: ALSO keep out events that have not yet reached reminder window (see jam_poll class)
+        # aka if the event changes, its job can still be updated
         self.sent_events = {e for e in self.sent_events if self.now() < e.start}
 
     def to_event(self, event) -> Event:
