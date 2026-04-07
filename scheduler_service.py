@@ -4,6 +4,7 @@ from apscheduler.events import EVENT_JOB_EXECUTED
 
 from calendar_context import CalendarContext
 
+
 class SchedulerService:
     def __init__(self, calendar_ctx: CalendarContext, jam_polls, timezone, reminder_window: timedelta):
         self.scheduler = AsyncIOScheduler(timezone=timezone)
@@ -11,6 +12,9 @@ class SchedulerService:
         self.jam_polls = jam_polls
         self.timezone = timezone
         self.reminder_window = reminder_window
+
+        # 👇 moved here (owned by service)
+        self.sent_event_ids: set[str] = set()
 
     def start(self):
         self.scheduler.add_listener(self._on_job_executed, EVENT_JOB_EXECUTED)
@@ -39,10 +43,17 @@ class SchedulerService:
             if self.scheduler.get_job(job_id):
                 self.scheduler.remove_job(job_id)
 
+            # also clean up sent store
+            self.sent_event_ids.discard(job_id)
+
     def _schedule_event_jobs(self, events):
         now = datetime.now(tz=self.timezone)
 
         for event in events:
+            # 👇 dedup here (NOT in CalendarContext anymore)
+            if event.id in self.sent_event_ids:
+                continue
+
             run_time = event.get_run_time(self.reminder_window, now)
             if not run_time:
                 continue
@@ -51,11 +62,21 @@ class SchedulerService:
                 self.jam_polls.event_poll,
                 trigger="date",
                 run_date=run_time,
-                id=event.id,
+                id="event_" + event.id,
                 kwargs={"event": event},
                 replace_existing=True,
                 misfire_grace_time=86400 * 4
             )
+
+
+    def _on_job_executed(self, ap_event):
+        if ap_event.job_id.startswith("event"):
+            self.sent_event_ids.add(ap_event.job_id)
+        
+        #TODO: this line has to be compatible, unfortunately that requires having the ENTIRE event object
+        # # events whose jobs have already completed and removed from job store
+        # # self.events() updating should not readd the same event back to the scheduler
+        # self.sent_events = {e for e in self.sent_events if self.now() < e.start}
 
     def schedule_cardholder_jobs(self):
         self.scheduler.add_job(
@@ -88,11 +109,3 @@ class SchedulerService:
             id="card_holder_alert_2",
             replace_existing=True
         )
-
-    # ensure that future events passed in don't have a job scheduled if event already sent
-    def _on_job_executed(self, apscheduler_event):
-        job = self.scheduler.get_job(apscheduler_event.job_id)
-
-        if job and "event" in job.kwargs:
-            event = job.kwargs["event"]
-            self.calendar_ctx.mark_event_sent(event)
