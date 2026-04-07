@@ -61,7 +61,7 @@ class JamBot(commands.Bot):
     async def on_ready(self):
         print(f'{self.user} is ready')
 
-    @tasks.loop(hours=12)
+    @tasks.loop(seconds=10)
     async def schedule_jobs_loop(self):
         if not self.is_ready():
             return
