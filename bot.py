@@ -69,10 +69,6 @@ class JamBot(commands.Bot):
             return
         print("get next event set")
 
-        #BUG: if an event has an added job, but it then changes data, 
-        # that data will not reflect in the final discord post
-        # because calendar_context.sent_events simply adds all events id
-        # and anything in sent_events gets skipped, even if updated
         await self.scheduler_service.sync_event_jobs()
 
 
