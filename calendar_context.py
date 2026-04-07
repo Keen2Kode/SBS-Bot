@@ -30,7 +30,6 @@ class CalendarContext:
         self.calendar_owner = "rmitsbs@gmail.com"
         self.calendar = self.service.calendars().get(calendarId=self.calendar_owner).execute()
         self.timezone = timezone
-        self.sent_events = set()
         self.reminder_window = reminder_window
 
         self.url = "https://calendar.google.com/calendar/u/0?cid=cm1pdHNic0BnbWFpbC5jb20"
@@ -78,7 +77,7 @@ class CalendarContext:
                 continue
 
             event = self.to_event(calendar_event)
-            if not event.need_to_add(self.sent_events, recurring_ids):
+            if not event.need_to_add(recurring_ids):
                 continue
 
             # only use immediate next event
@@ -90,16 +89,6 @@ class CalendarContext:
 
         return next_events, to_delete
     
-
-    # triggered by scheduler
-    def mark_event_sent(self, event: Event):
-        # add all events to sent events
-        # will only affect the events to add next time around
-        self.sent_events.add(event)
-        
-        # events whose jobs have already completed and removed from job store
-        # self.events() updating should not readd the same event back to the scheduler
-        self.sent_events = {e for e in self.sent_events if self.now() < e.start}
 
     def to_event(self, event) -> Event:
         

@@ -70,11 +70,8 @@ class Event:
 
         return run_time
     
-    def need_to_add(self, sent_events, recurring_ids):
+    def need_to_add(self, recurring_ids):
         if not self.is_discord_event:
-            return False
-
-        if self in sent_events:
             return False
 
         if self.recurring_id in recurring_ids:

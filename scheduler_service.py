@@ -1,8 +1,10 @@
 from datetime import datetime, timedelta
+from typing import List
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.events import EVENT_JOB_EXECUTED
 
 from calendar_context import CalendarContext
+from event import Event
 
 
 class SchedulerService:
@@ -13,11 +15,9 @@ class SchedulerService:
         self.timezone = timezone
         self.reminder_window = reminder_window
 
-        # 👇 moved here (owned by service)
-        self.sent_event_ids: set[str] = set()
+        self.sent_events: set[Event] = set()
 
     def start(self):
-        self.scheduler.add_listener(self._on_job_executed, EVENT_JOB_EXECUTED)
         self.scheduler.start()
 
     async def sync_event_jobs(self):
@@ -31,6 +31,8 @@ class SchedulerService:
         #   misfire_grace_time
         self._remove_event_jobs(cancelled_ids)
         self._schedule_event_jobs(events)
+        # remove outdated events to prevent overfilling
+        self.sent_events = {e for e in self.sent_events if self.calendar_ctx.now() < e.start}
 
 
 
@@ -38,20 +40,16 @@ class SchedulerService:
 
 
 
-    def _remove_event_jobs(self, cancelled_ids):
+    def _remove_event_jobs(self, cancelled_ids: List[str]):
         for job_id in cancelled_ids:
             if self.scheduler.get_job(job_id):
                 self.scheduler.remove_job(job_id)
 
-            # also clean up sent store
-            self.sent_event_ids.discard(job_id)
-
-    def _schedule_event_jobs(self, events):
-        now = datetime.now(tz=self.timezone)
+    def _schedule_event_jobs(self, events: List[Event]):
+        now = self.calendar_ctx.now()
 
         for event in events:
-            # 👇 dedup here (NOT in CalendarContext anymore)
-            if event.id in self.sent_event_ids:
+            if event in self.sent_events:
                 continue
 
             run_time = event.get_run_time(self.reminder_window, now)
@@ -59,24 +57,20 @@ class SchedulerService:
                 continue
 
             self.scheduler.add_job(
-                self.jam_polls.event_poll,
+                self._wrapped_event_poll,
                 trigger="date",
                 run_date=run_time,
-                id="event_" + event.id,
+                id=event.id,
                 kwargs={"event": event},
                 replace_existing=True,
                 misfire_grace_time=86400 * 4
             )
+    
+    async def _wrapped_event_poll(self, event):
+        await self.jam_polls.event_poll(event)
+        self.sent_events.add(event)
 
 
-    def _on_job_executed(self, ap_event):
-        if ap_event.job_id.startswith("event"):
-            self.sent_event_ids.add(ap_event.job_id)
-        
-        #TODO: this line has to be compatible, unfortunately that requires having the ENTIRE event object
-        # # events whose jobs have already completed and removed from job store
-        # # self.events() updating should not readd the same event back to the scheduler
-        # self.sent_events = {e for e in self.sent_events if self.now() < e.start}
 
     def schedule_cardholder_jobs(self):
         self.scheduler.add_job(
