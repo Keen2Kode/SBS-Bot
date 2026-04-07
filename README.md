@@ -6,31 +6,30 @@ This bot is designed to support the operations of the Student Band Society, an R
 
 ## ✨ Key Features
 
-### 🗓️ 1. Calendar-Driven Event Polls and Alerts
+### 🗓️ 1. Google Calendar-Driven Event Polls and Alerts
 
 The bot integrates with Google Calendar to help coordinate club events automatically. Here's the problems that 
 - **No more manual setup:** Organisers don’t need to edit code or restart the bot just to schedule a jam — simply create an event in the calendar
 - **Easy to change plans:** If a jam time, location, or details change, just update the calendar — the bot will reflect those changes automatically
 - **Cancelling is simple:** Removing an event from the calendar automatically stops any reminders from being sent. This is useful during holiday or break periods.
-- **Recurring jams are effortless:** Weekly jams only need to be set up once as a recurring calendar event — no need to manage them week by week
-- **One-off events are just as easy:** Special events like gigs or workshops can be added the same way, without any extra setup.
+- **Customizable jam events:** Customized weekly jams or one-off events like gigs or workshops can be added by creating a recurring or one-off Google Calendar event.
 
-#### Discord Event Detection
-The bot regularly syncs with the club calendar for upcoming events and event updates that have been marked for Discord posting.
-
+#### Creating Discord Event posts
 Each Discord Event post can include:
-- The event title and description
+- Title
+- Description
 - The date and time
 - The location
 - Event picture
 - An Yes/No attendance poll
 
-
-#### Smart Channel Posting
 Events can be configured so that their reminders are posted in the Discord channel specified in the calendar event.
 
 #### Calendar Event Reminders
 The bot automatically schedules the Discord Event post **7 days before the event** so members have time to respond.
+
+#### Discord Event Detection
+The bot regularly syncs with the club calendar for upcoming events and event updates marked for Discord posting.
 
 #### Handling Calendar Updates
 Until the Discord Event is posted, The bot can handle calendar event updates such as:
