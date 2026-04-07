@@ -1,13 +1,20 @@
 from datetime import datetime, timedelta
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.events import EVENT_JOB_EXECUTED
 
+from calendar_context import CalendarContext
 
 class SchedulerService:
-    def __init__(self, scheduler, calendar_ctx, jam_polls, timezone, reminder_window: timedelta):
-        self.scheduler = scheduler
+    def __init__(self, calendar_ctx: CalendarContext, jam_polls, timezone, reminder_window: timedelta):
+        self.scheduler = AsyncIOScheduler(timezone=timezone)
         self.calendar_ctx = calendar_ctx
         self.jam_polls = jam_polls
         self.timezone = timezone
         self.reminder_window = reminder_window
+
+    def start(self):
+        self.scheduler.add_listener(self._on_job_executed, EVENT_JOB_EXECUTED)
+        self.scheduler.start()
 
     async def sync_event_jobs(self):
         events, cancelled_ids = await self.calendar_ctx.next_discord_events()
@@ -81,3 +88,11 @@ class SchedulerService:
             id="card_holder_alert_2",
             replace_existing=True
         )
+
+    # ensure that future events passed in don't have a job scheduled if event already sent
+    def _on_job_executed(self, apscheduler_event):
+        job = self.scheduler.get_job(apscheduler_event.job_id)
+
+        if job and "event" in job.kwargs:
+            event = job.kwargs["event"]
+            self.calendar_ctx.mark_event_sent(event)

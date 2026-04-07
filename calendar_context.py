@@ -87,21 +87,19 @@ class CalendarContext:
             
             next_events.append(event)
 
-        self.update_sent_events(next_events)
 
         return next_events, to_delete
     
 
-    
-    def update_sent_events(self, events: List[Event]):
+    # triggered by scheduler
+    def mark_event_sent(self, event: Event):
         # add all events to sent events
         # will only affect the events to add next time around
-        self.sent_events.update(events)
+        self.sent_events.add(event)
         
         # events whose jobs have already completed and removed from job store
         # self.events() updating should not readd the same event back to the scheduler
-        self.sent_events = {e for e in self.sent_events 
-            if (e.start - self.reminder_window) <= self.now() < e.start}
+        self.sent_events = {e for e in self.sent_events if self.now() < e.start}
 
     def to_event(self, event) -> Event:
         
